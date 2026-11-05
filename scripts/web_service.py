@@ -316,3 +316,51 @@ def read_document(root: Path, relative_path: str) -> dict[str, Any]:
         "content": document.body,
     }
 
+
+def delete_document(root: Path, relative_path: str) -> dict[str, Any]:
+    """Delete one knowledge file when no other document references it."""
+    requested = (root / relative_path).resolve()
+    try:
+        relative = requested.relative_to(root.resolve())
+    except ValueError as exc:
+        raise ValueError("文件路径超出知识库范围") from exc
+    if not relative.parts or relative.parts[0] not in CONTENT_DIRECTORIES:
+        raise ValueError("只能删除正式知识目录中的文件")
+    if requested.suffix.lower() != ".md" or not requested.is_file():
+        raise ValueError("知识文件不存在")
+    from knowledge import parse_document
+
+    target = parse_document(requested)
+    documents, parse_errors = discover_documents(root)
+    if parse_errors:
+        raise ValueError("知识文件解析失败：" + "；".join(parse_errors))
+    dependents = []
+    for document in documents:
+        if document.id == target.id:
+            continue
+        for field in ("topics", "related", "references"):
+            values = document.metadata.get(field, [])
+            if isinstance(values, list) and target.id in values:
+                dependents.append(document.metadata.get("title", document.id))
+                break
+    cascade = []
+    if dependents and target.type == "raw":
+        for document in documents:
+            values = document.metadata.get("references", [])
+            if document.id != target.id and target.id in values:
+                if document.type != "note":
+                    raise ValueError("该文件仍被主题或选题引用，无法删除：" + "、".join(dependents[:5]))
+                cascade.append(document.path)
+        cascade_ids = {path.stem for path in cascade}
+        for document in documents:
+            values = document.metadata.get("references", [])
+            if document.id not in cascade_ids and any(item in cascade_ids for item in values):
+                raise ValueError("该文件的自动摘要仍被其他知识引用，无法删除：" + str(document.metadata.get("title", document.id)))
+        if len(cascade) != len(dependents):
+            raise ValueError("该文件仍被其他知识引用，无法删除：" + "、".join(dependents[:5]))
+    for path in [*cascade, requested]:
+        path.unlink()
+    rebuild_index(root)
+    suffix = "及其自动摘要" if cascade else ""
+    return {"message": f"已删除：{target.metadata.get('title', target.id)}{suffix}", "path": relative.as_posix()}
+

@@ -9,7 +9,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
-from web_service import extract_html, save_idea, save_link, search_knowledge  # noqa: E402
+from web_service import delete_document, extract_html, save_idea, save_link, search_knowledge  # noqa: E402
 
 
 class WebServiceTest(unittest.TestCase):
@@ -70,6 +70,88 @@ class WebServiceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             with self.assertRaisesRegex(ValueError, "关键词"):
                 search_knowledge(Path(temporary_directory), "   ")
+
+    def test_delete_unreferenced_document_rebuilds_index(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            saved = save_idea(root, "待删除的想法")
+            result = delete_document(root, saved["path"])
+            self.assertIn("已删除", result["message"])
+            self.assertFalse((root / saved["path"]).exists())
+
+    def test_delete_referenced_document_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            raw = save_idea(root, "被引用的原始想法")
+            raw_id = Path(raw["path"]).stem
+            note = root / "notes" / "20261105-reference-note.md"
+            note.parent.mkdir(parents=True)
+            note.write_text(
+                "---\n"
+                f'id: "20261105-reference-note"\n'
+                'title: "引用笔记"\n'
+                'type: "note"\n'
+                'status: "active"\n'
+                'created_at: "2026-11-05 16:00"\n'
+                'updated_at: "2026-11-05 16:00"\n'
+                'source_url: ""\n'
+                'source_type: "idea"\n'
+                'tags: []\n'
+                'topics: []\n'
+                'related: []\n'
+                f'references: ["{raw_id}"]\n'
+                "---\n\n正文\n",
+                encoding="utf-8",
+            )
+            topic = root / "topics" / "20261105-reference-topic.md"
+            topic.parent.mkdir(parents=True)
+            topic.write_text(
+                "---\n"
+                'id: "20261105-reference-topic"\n'
+                'title: "主题引用"\n'
+                'type: "topic"\n'
+                'status: "active"\n'
+                'created_at: "2026-11-05 16:00"\n'
+                'updated_at: "2026-11-05 16:00"\n'
+                'source_url: ""\n'
+                'source_type: "idea"\n'
+                'tags: []\n'
+                'topics: []\n'
+                'related: []\n'
+                'references: ["20261105-reference-note"]\n'
+                "---\n\n主题\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "引用"):
+                delete_document(root, raw["path"])
+
+    def test_delete_raw_also_removes_its_summary_note(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            raw = save_idea(root, "带摘要的想法")
+            raw_id = Path(raw["path"]).stem
+            note = root / "notes" / "20261105-summary-note.md"
+            note.parent.mkdir(parents=True)
+            note.write_text(
+                "---\n"
+                'id: "20261105-summary-note"\n'
+                'title: "自动摘要"\n'
+                'type: "note"\n'
+                'status: "active"\n'
+                'created_at: "2026-11-05 16:00"\n'
+                'updated_at: "2026-11-05 16:00"\n'
+                'source_url: ""\n'
+                'source_type: "idea"\n'
+                'tags: []\n'
+                'topics: []\n'
+                'related: []\n'
+                f'references: ["{raw_id}"]\n'
+                "---\n\n摘要\n",
+                encoding="utf-8",
+            )
+            result = delete_document(root, raw["path"])
+            self.assertIn("自动摘要", result["message"])
+            self.assertFalse(note.exists())
 
 
 if __name__ == "__main__":

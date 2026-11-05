@@ -130,6 +130,12 @@ textarea::placeholder { color: #a1a59e; }
 .document-dialog { width: min(760px, calc(100% - 32px)); max-height: min(82vh, 900px); padding: 0; border: 1px solid var(--line); border-radius: 20px; color: var(--ink); background: var(--panel); box-shadow: var(--shadow); }
 .document-dialog::backdrop { background: rgba(25,27,24,.38); backdrop-filter: blur(5px); }
 .dialog-header { position: sticky; top: 0; display: flex; justify-content: space-between; gap: 20px; padding: 24px 26px 18px; border-bottom: 1px solid var(--line); background: rgba(251,250,246,.95); }
+.dialog-actions { display: flex; align-items: flex-start; }
+.dialog-footer { display: flex; justify-content: flex-end; padding: 13px 26px 16px; border-top: 1px solid var(--line); background: rgba(247,246,240,.72); }
+.danger-button { display: inline-flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid transparent; border-radius: 8px; color: #9a6259; background: transparent; font-size: 12px; cursor: pointer; transition: color 140ms ease, background 140ms ease, border-color 140ms ease; }
+.danger-button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.danger-button:hover { border-color: #e5c7c0; color: #8c362a; background: #fff3ef; }
+.danger-button:disabled { opacity: .5; cursor: wait; }
 .dialog-header h2 { margin: 10px 0 5px; font-family: "STSong", "SimSun", serif; font-size: 26px; font-weight: 500; }
 .dialog-header p { margin: 0; color: var(--muted); font-size: 11px; }
 .dialog-header button { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #ecece5; font-size: 22px; cursor: pointer; }

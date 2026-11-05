@@ -32,6 +32,7 @@ const hint = document.querySelector("#composer-hint");
 const recentList = document.querySelector("#recent-list");
 const knowledgeCount = document.querySelector("#knowledge-count");
 const dialog = document.querySelector("#document-dialog");
+let openDocumentPath = "";
 const modelLabel = document.createElement("label");
 modelLabel.className = "model-selector";
 modelLabel.textContent = "百炼模型";
@@ -141,9 +142,31 @@ async function openDocument(path) {
     document.querySelector("#dialog-title").textContent = payload.title;
     document.querySelector("#dialog-meta").textContent = `${payload.updated_at} · ${payload.path}`;
     document.querySelector("#dialog-content").textContent = payload.content;
+    openDocumentPath = path;
     dialog.showModal();
   } catch (error) {
     addMessage("error", error.message);
+  }
+}
+
+async function deleteOpenDocument() {
+  if (!openDocumentPath) return;
+  if (!window.confirm("确定删除这条知识吗？如果存在自动摘要，摘要也会一并删除。")) return;
+  const button = document.querySelector("#dialog-delete");
+  button.disabled = true;
+  try {
+    const result = await requestJson("/api/delete", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path: openDocumentPath }),
+    });
+    dialog.close();
+    addMessage("system", result.message);
+    await refreshRecent();
+    openDocumentPath = "";
+    window.setTimeout(() => window.location.reload(), 350);
+  } catch (error) {
+    addMessage("error", error.message);
+    button.disabled = false;
   }
 }
 
@@ -204,6 +227,7 @@ document.addEventListener("click", (event) => {
   if (target) openDocument(target.dataset.path);
 });
 document.querySelector("#dialog-close").addEventListener("click", () => dialog.close());
+document.querySelector("#dialog-delete").addEventListener("click", deleteOpenDocument);
 dialog.addEventListener("click", (event) => {
   if (event.target === dialog) dialog.close();
 });

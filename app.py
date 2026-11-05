@@ -29,7 +29,7 @@ def load_local_environment():
 
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from web_service import list_recent, read_document, save_idea, save_link, search_knowledge  # noqa: E402
+from web_service import delete_document, list_recent, read_document, save_idea, save_link, search_knowledge  # noqa: E402
 from ai_summary import summarize
 
 
@@ -115,6 +115,8 @@ class GuizangHandler(BaseHTTPRequestHandler):
                 result = save_link(ROOT, content, supplied_title=title, supplied_body=body)
             elif endpoint == "/api/summarize":
                 result = summarize(ROOT, str(payload.get("path", "")), payload.get("model", "qwen-plus"))
+            elif endpoint == "/api/delete":
+                result = delete_document(ROOT, str(payload.get("path", "")))
             elif endpoint == "/api/search":
                 results = search_knowledge(ROOT, content)
                 result = {
