@@ -4,7 +4,7 @@
 
 归藏是一个为个人创作与 AI 产品实践服务的本地 AI 原生知识系统。它将外部资料、个人想法和实践经验持续编译成带有个人判断的知识，并进一步转化为选题与创作成果。
 
-项目当前处于设计阶段，尚未开始编码。
+项目当前处于 V1 基础设施开发阶段，已经具备知识文件规范、结构校验和索引重建能力。
 
 ## 项目文档
 
@@ -26,5 +26,41 @@
 → 生成可执行选题
 ```
 
-实际使用方式和验证命令将在首个可运行版本完成后补充。
+## 当前能力
+
+- 定义 `raw`、`note`、`topic` 和 `brief` 四类知识文件；
+- 通过命令安全写入个人想法或已取得正文的网页原料；
+- 校验 frontmatter、目录类型、时间、引用和双向关联；
+- 根据正式知识文件生成可重建的全库索引；
+- 使用 Python 标准库运行，不需要安装项目依赖。
+
+## 使用方式
+
+录入一条个人想法：
+
+```powershell
+python scripts/ingest.py idea --title "想法标题" --content "想法原文"
+```
+
+录入一篇已经保存为 UTF-8 文本的网页正文：
+
+```powershell
+python scripts/ingest.py web --title "文章标题" --url "https://example.com/article" --content-file "E:\path\article.txt"
+```
+
+入库命令只写入不可伪造的原始资料，不负责生成 AI 笔记。随后复制 [schema/templates](schema/templates) 中的对应模板，按照 [AI 工作流](schema/WORKFLOW.md) 完成语义加工，并运行：
+
+```powershell
+python scripts/validate.py
+python scripts/rebuild_index.py
+python scripts/rebuild_index.py --check
+```
+
+运行自动化测试：
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+当前尚未实现自动网页抓取和主题回织编排。
 
