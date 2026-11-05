@@ -29,7 +29,7 @@ def load_local_environment():
     if config.is_file():
         for line in config.read_text(encoding="utf-8").splitlines():
             name, separator, value = line.partition("=")
-            if separator and name.strip() in {"DASHSCOPE_API_KEY", "GUIZANG_BAILIAN_BASE_URL"}:
+            if separator and name.strip() in {"DASHSCOPE_API_KEY", "GUIZANG_BAILIAN_BASE_URL", "DEEPSEEK_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY"}:
                 os.environ.setdefault(name.strip(), value.strip())
 
 
@@ -84,6 +84,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from web_service import delete_document, list_recent, read_document, save_idea, save_link, search_knowledge  # noqa: E402
 from ai_summary import summarize
+from model_provider import list_providers, call_model
 
 
 class GuizangHandler(BaseHTTPRequestHandler):
@@ -140,6 +141,9 @@ class GuizangHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         try:
+            if parsed.path == "/api/providers":
+                self._send_json({"providers": list_providers()})
+                return
             if parsed.path == "/api/state":
                 recent = list_recent(ROOT)
                 self._send_json({"recent": recent, "count": len(list_recent(ROOT, limit=100000))})
@@ -168,7 +172,10 @@ class GuizangHandler(BaseHTTPRequestHandler):
                     raise ValueError("文章标题和正文必须是文本")
                 result = save_link(ROOT, content, supplied_title=title, supplied_body=body)
             elif endpoint == "/api/summarize":
-                result = summarize(ROOT, str(payload.get("path", "")), payload.get("model", "qwen-plus"))
+                result = summarize(ROOT, str(payload.get("path", "")), payload.get("model", "qwen-plus"), payload.get("provider", "bailian"))
+            elif endpoint == "/api/model-test":
+                call_model(payload.get("provider"), payload.get("model"), "请简短回答。", "回复：连接成功。")
+                result = {"message": "模型连接成功"}
             elif endpoint == "/api/delete":
                 result = delete_document(ROOT, str(payload.get("path", "")))
             elif endpoint == "/api/search":

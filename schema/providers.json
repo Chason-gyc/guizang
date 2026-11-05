@@ -1,0 +1,31 @@
+{
+  "bailian": {
+    "label": "阿里百炼",
+    "env": "DASHSCOPE_API_KEY",
+    "base_env": "GUIZANG_BAILIAN_BASE_URL",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "protocol": "openai_chat",
+    "models": [{"id":"qwen-plus","label":"通义千问 Plus"},{"id":"qwen-flash","label":"通义千问 Flash"},{"id":"qwen-max","label":"通义千问 Max"}]
+  },
+  "deepseek": {
+    "label": "DeepSeek",
+    "env": "DEEPSEEK_API_KEY",
+    "base_url": "https://api.deepseek.com",
+    "protocol": "openai_chat",
+    "models": [{"id":"deepseek-chat","label":"DeepSeek Chat"},{"id":"deepseek-reasoner","label":"DeepSeek Reasoner"}]
+  },
+  "openai": {
+    "label": "OpenAI",
+    "env": "OPENAI_API_KEY",
+    "base_url": "https://api.openai.com/v1",
+    "protocol": "openai_responses",
+    "models": [{"id":"gpt-5.4","label":"GPT-5.4"},{"id":"gpt-5.4-mini","label":"GPT-5.4 mini"}]
+  },
+  "claude": {
+    "label": "Anthropic Claude",
+    "env": "ANTHROPIC_API_KEY",
+    "base_url": "https://api.anthropic.com",
+    "protocol": "anthropic_messages",
+    "models": [{"id":"claude-sonnet-4-6","label":"Claude Sonnet 4.6"},{"id":"claude-opus-4-6","label":"Claude Opus 4.6"}]
+  }
+}

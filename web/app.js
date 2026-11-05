@@ -33,30 +33,65 @@ const recentList = document.querySelector("#recent-list");
 const knowledgeCount = document.querySelector("#knowledge-count");
 const dialog = document.querySelector("#document-dialog");
 let openDocumentPath = "";
-const modelLabel = document.createElement("label");
+const modelLabel = document.createElement("div");
 modelLabel.className = "model-selector";
-modelLabel.textContent = "百炼模型";
-const modelInput = document.createElement("input");
-modelInput.setAttribute("list", "bailian-models");
-modelInput.value = localStorage.getItem("guizang-model") || "qwen-plus";
-modelInput.addEventListener("change", () => localStorage.setItem("guizang-model", modelInput.value.trim()));
-modelLabel.appendChild(modelInput);
-const models = document.createElement("datalist");
-models.id = "bailian-models";
-models.innerHTML = '<option value="qwen-plus"><option value="qwen-flash"><option value="qwen-max">';
-composer.prepend(modelLabel, models);
+const providerInput = document.createElement("select");
+providerInput.setAttribute("aria-label", "模型厂商");
+const modelInput = document.createElement("select");
+modelInput.setAttribute("aria-label", "模型");
+const testButton = document.createElement("button");
+testButton.type = "button";
+testButton.textContent = "测试连接";
+const modelStatus = document.createElement("span");
+modelStatus.setAttribute("role", "status");
+modelLabel.append(providerInput, modelInput, testButton, modelStatus);
+composer.prepend(modelLabel);
+testButton.disabled = true;
+requestJson("/api/providers").then(({providers}) => {
+  providers.forEach(p => providerInput.add(new Option(p.label, p.id)));
+  providerInput.value = providers.some(p => p.id === localStorage.getItem("guizang-provider")) ? localStorage.getItem("guizang-provider") : "bailian";
+  const updateModels = () => {
+    const p = providers.find(p => p.id === providerInput.value);
+    modelInput.replaceChildren();
+    p.models.forEach(m => modelInput.add(new Option(m.label, m.id)));
+    const saved = localStorage.getItem("guizang-model-" + p.id);
+    if (p.models.some(m => m.id === saved)) modelInput.value = saved;
+    localStorage.setItem("guizang-provider", p.id);
+    modelStatus.textContent = p.configured ? "已配置密钥，待测试" : "尚未配置密钥";
+    testButton.disabled = !p.configured;
+  };
+  providerInput.onchange = updateModels;
+  modelInput.onchange = () => {
+    localStorage.setItem("guizang-model-" + providerInput.value, modelInput.value);
+    modelStatus.textContent = "模型已切换，请测试连接";
+  };
+  updateModels();
+}).catch(error => { modelStatus.textContent = error.message; });
+testButton.onclick = async () => {
+  testButton.disabled = true;
+  providerInput.disabled = modelInput.disabled = true;
+  modelStatus.textContent = "正在连接…";
+  try {
+    const result = await requestJson("/api/model-test", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({provider: providerInput.value, model: modelInput.value}),
+    });
+    modelStatus.textContent = result.message;
+  } catch (error) { modelStatus.textContent = error.message; }
+  finally { testButton.disabled = false; providerInput.disabled = modelInput.disabled = false; }
+};
 const composerWrap = document.querySelector(".composer-wrap");
 new ResizeObserver(() => {
   conversation.style.paddingBottom = `${composerWrap.getBoundingClientRect().height + 32}px`;
   document.documentElement.style.setProperty("--composer-height", `${composerWrap.getBoundingClientRect().height + 24}px`);
 }).observe(composerWrap);
 
-async function generateSummary(path, model) {
+async function generateSummary(path, model, provider = providerInput.value) {
   addMessage("system", "原文已保存，正在生成摘要…");
   try {
     const result = await requestJson("/api/summarize", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path, model }),
+      body: JSON.stringify({ path, model, provider }),
     });
     addMessage("system", result.message);
     await refreshRecent();
