@@ -1,0 +1,28 @@
+# Dependencies and environments
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Build, test, and generated output
+build/
+dist/
+.pytest_cache/
+.coverage
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# AI local state and task temporaries
+.claude/
+.codex/
+.tmp/
