@@ -124,6 +124,9 @@ def fetch_webpage(url: str, timeout: int = 15) -> tuple[str, str]:
                 raise ValueError("网页正文超过 2 MB，暂不自动保存")
             charset = response.headers.get_content_charset() or "utf-8"
     except urllib.error.HTTPError as exc:
+        if exc.code in {403, 412, 429, 521}:
+            from browser_reader import fetch_rendered_page
+            return fetch_rendered_page(url)
         raise ValueError(f"网页返回 HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:
         reason = getattr(exc, "reason", exc)
@@ -136,7 +139,8 @@ def fetch_webpage(url: str, timeout: int = 15) -> tuple[str, str]:
     else:
         title, body = extract_html(text)
         if body.strip() == title.strip():
-            raise ValueError("网页只返回了页面标题，未取得文章正文。页面可能需要登录或浏览器加载，请提供原文后再保存。")
+            from browser_reader import fetch_rendered_page
+            return fetch_rendered_page(url)
     if not body:
         raise ValueError("没有从网页中提取到可保存的正文")
     return title or url, body

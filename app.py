@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import os
 import sys
 import webbrowser
 from http import HTTPStatus
@@ -15,9 +16,21 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
+
+
+def load_local_environment():
+    """Load only supported local settings without overriding process settings."""
+    config = ROOT / ".env"
+    if config.is_file():
+        for line in config.read_text(encoding="utf-8").splitlines():
+            name, separator, value = line.partition("=")
+            if separator and name.strip() in {"DASHSCOPE_API_KEY", "GUIZANG_BAILIAN_BASE_URL"}:
+                os.environ.setdefault(name.strip(), value.strip())
+
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from web_service import list_recent, read_document, save_idea, save_link, search_knowledge  # noqa: E402
+from ai_summary import summarize
 
 
 class GuizangHandler(BaseHTTPRequestHandler):
@@ -91,15 +104,18 @@ class GuizangHandler(BaseHTTPRequestHandler):
         try:
             payload = self._read_json()
             content = str(payload.get("content", ""))
-            if self.path == "/api/idea":
+            endpoint = urlparse(self.path).path.rstrip("/") or "/"
+            if endpoint == "/api/idea":
                 result = save_idea(ROOT, content)
-            elif self.path == "/api/link":
+            elif endpoint == "/api/link":
                 title = payload.get("title", "")
                 body = payload.get("body")
                 if not isinstance(title, str) or (body is not None and not isinstance(body, str)):
                     raise ValueError("文章标题和正文必须是文本")
                 result = save_link(ROOT, content, supplied_title=title, supplied_body=body)
-            elif self.path == "/api/search":
+            elif endpoint == "/api/summarize":
+                result = summarize(ROOT, str(payload.get("path", "")), payload.get("model", "qwen-plus"))
+            elif endpoint == "/api/search":
                 results = search_knowledge(ROOT, content)
                 result = {
                     "message": f"找到 {len(results)} 条相关内容。" if results else "没有找到相关内容。",
@@ -116,6 +132,7 @@ class GuizangHandler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
+    load_local_environment()
     parser = argparse.ArgumentParser(description="启动归藏本地可视化入口")
     parser.add_argument("--host", default="127.0.0.1", help="监听地址，默认仅本机")
     parser.add_argument("--port", type=int, default=8765, help="监听端口")

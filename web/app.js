@@ -32,6 +32,41 @@ const hint = document.querySelector("#composer-hint");
 const recentList = document.querySelector("#recent-list");
 const knowledgeCount = document.querySelector("#knowledge-count");
 const dialog = document.querySelector("#document-dialog");
+const modelLabel = document.createElement("label");
+modelLabel.className = "model-selector";
+modelLabel.textContent = "百炼模型";
+const modelInput = document.createElement("input");
+modelInput.setAttribute("list", "bailian-models");
+modelInput.value = localStorage.getItem("guizang-model") || "qwen-plus";
+modelInput.addEventListener("change", () => localStorage.setItem("guizang-model", modelInput.value.trim()));
+modelLabel.appendChild(modelInput);
+const models = document.createElement("datalist");
+models.id = "bailian-models";
+models.innerHTML = '<option value="qwen-plus"><option value="qwen-flash"><option value="qwen-max">';
+composer.prepend(modelLabel, models);
+const composerWrap = document.querySelector(".composer-wrap");
+new ResizeObserver(() => {
+  conversation.style.paddingBottom = `${composerWrap.getBoundingClientRect().height + 32}px`;
+  document.documentElement.style.setProperty("--composer-height", `${composerWrap.getBoundingClientRect().height + 24}px`);
+}).observe(composerWrap);
+
+async function generateSummary(path, model) {
+  addMessage("system", "原文已保存，正在生成摘要…");
+  try {
+    const result = await requestJson("/api/summarize", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path, model }),
+    });
+    addMessage("system", result.message);
+    await refreshRecent();
+  } catch (error) {
+    addMessage("error", `原文仍已保存。${error.message}`);
+    const retry = document.createElement("button");
+    retry.textContent = "重试生成摘要";
+    retry.onclick = async () => { retry.remove(); await generateSummary(path, modelInput.value.trim()); };
+    conversation.appendChild(retry);
+  }
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -131,6 +166,7 @@ async function submitMessage(event) {
       body: JSON.stringify({ content }),
     });
     addMessage("system", payload.message, payload.results || []);
+    if (mode !== "search") await generateSummary(payload.path, modelInput.value.trim());
     await refreshRecent();
   } catch (error) {
     addMessage("error", error.message);
@@ -196,6 +232,7 @@ function showManualImport(url) {
         body: JSON.stringify({ content: url, title: form.elements.title.value, body: form.elements.body.value }),
       });
       status.textContent = payload.message;
+      await generateSummary(payload.path, modelInput.value.trim());
       form.querySelectorAll("input, textarea").forEach((field) => { field.disabled = true; });
       await refreshRecent();
     } catch (error) {
