@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
 import mimetypes
 import os
+import signal
+import subprocess
 import sys
+import time
 import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +20,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
+PID_FILE = ROOT / ".guizang.pid"
 
 
 def load_local_environment():
@@ -26,6 +31,54 @@ def load_local_environment():
             name, separator, value = line.partition("=")
             if separator and name.strip() in {"DASHSCOPE_API_KEY", "GUIZANG_BAILIAN_BASE_URL"}:
                 os.environ.setdefault(name.strip(), value.strip())
+
+
+def stop_previous_instance() -> None:
+    """Stop only the previous process recorded by this project."""
+    if not PID_FILE.is_file():
+        return
+    try:
+        previous_pid = int(PID_FILE.read_text(encoding="ascii").strip())
+    except (OSError, ValueError):
+        PID_FILE.unlink(missing_ok=True)
+        return
+    if previous_pid == os.getpid():
+        return
+    try:
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill", "/PID", str(previous_pid), "/T", "/F"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        else:
+            os.kill(previous_pid, signal.SIGTERM)
+        for _ in range(20):
+            time.sleep(0.05)
+            try:
+                os.kill(previous_pid, 0)
+            except (OSError, SystemError):
+                break
+    except ProcessLookupError:
+        pass
+    except PermissionError as exc:
+        raise RuntimeError(f"无法停止上一次归藏服务进程：{previous_pid}") from exc
+    finally:
+        PID_FILE.unlink(missing_ok=True)
+
+
+def write_pid_file() -> None:
+    PID_FILE.write_text(str(os.getpid()), encoding="ascii", newline="\n")
+
+    def cleanup() -> None:
+        try:
+            if PID_FILE.read_text(encoding="ascii").strip() == str(os.getpid()):
+                PID_FILE.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    atexit.register(cleanup)
 
 sys.path.insert(0, str(ROOT / "scripts"))
 
@@ -38,6 +91,10 @@ class GuizangHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format_string: str, *args: object) -> None:
         print(f"[归藏] {self.address_string()} - {format_string % args}")
+
+
+class ReusableThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
 
     def _send_json(self, payload: object, status: int = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -135,13 +192,15 @@ class GuizangHandler(BaseHTTPRequestHandler):
 
 def main() -> int:
     load_local_environment()
+    stop_previous_instance()
     parser = argparse.ArgumentParser(description="启动归藏本地可视化入口")
     parser.add_argument("--host", default="127.0.0.1", help="监听地址，默认仅本机")
     parser.add_argument("--port", type=int, default=8765, help="监听端口")
     parser.add_argument("--no-browser", action="store_true", help="启动后不自动打开浏览器")
     args = parser.parse_args()
 
-    server = ThreadingHTTPServer((args.host, args.port), GuizangHandler)
+    server = ReusableThreadingHTTPServer((args.host, args.port), GuizangHandler)
+    write_pid_file()
     url = f"http://{args.host}:{args.port}"
     print(f"归藏已启动：{url}")
     print("按 Ctrl+C 停止。")
