@@ -32,6 +32,18 @@ const hint = document.querySelector("#composer-hint");
 const recentList = document.querySelector("#recent-list");
 const knowledgeCount = document.querySelector("#knowledge-count");
 const dialog = document.querySelector("#document-dialog");
+const sidebarToggle = document.querySelector("#sidebar-toggle");
+const appShell = document.querySelector(".app-shell");
+const narrowScreen = window.matchMedia("(max-width: 760px)");
+function setSidebar(open) {
+  appShell.classList.toggle("sidebar-hidden", !open);
+  sidebarToggle.setAttribute("aria-expanded", String(open));
+  sidebarToggle.setAttribute("aria-label", open ? "收起导航栏" : "展开导航栏");
+  sidebarToggle.title = open ? "收起导航栏" : "展开导航栏";
+}
+setSidebar(!narrowScreen.matches);
+sidebarToggle.addEventListener("click", () => setSidebar(sidebarToggle.getAttribute("aria-expanded") !== "true"));
+narrowScreen.addEventListener("change", (event) => setSidebar(!event.matches));
 let openDocumentPath = "";
 const modelLabel = document.createElement("div");
 modelLabel.className = "model-selector";
