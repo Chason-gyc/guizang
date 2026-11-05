@@ -93,9 +93,6 @@ class GuizangHandler(BaseHTTPRequestHandler):
         print(f"[归藏] {self.address_string()} - {format_string % args}")
 
 
-class ReusableThreadingHTTPServer(ThreadingHTTPServer):
-    allow_reuse_address = True
-
     def _send_json(self, payload: object, status: int = HTTPStatus.OK) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
@@ -188,6 +185,10 @@ class ReusableThreadingHTTPServer(ThreadingHTTPServer):
             self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
         except OSError as exc:
             self._send_json({"error": f"处理失败：{exc}"}, HTTPStatus.INTERNAL_SERVER_ERROR)
+
+
+class ReusableThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
 
 
 def main() -> int:
