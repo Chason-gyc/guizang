@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="归藏，本地 AI 原生个人知识入口" />
+    <title>归藏 · 万象归藏，智慧自生</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="知识库导航">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">藏</div>
+          <div>
+            <strong>归藏</strong>
+            <span>万象归藏，智慧自生</span>
+          </div>
+        </div>
+
+        <section class="sidebar-section">
+          <div class="section-title">
+            <span>最近内容</span>
+            <span id="knowledge-count" class="count-pill">0</span>
+          </div>
+          <div id="recent-list" class="recent-list">
+            <div class="empty-small">正在读取知识库…</div>
+          </div>
+        </section>
+
+        <div class="sidebar-footer">
+          <span class="status-dot"></span>
+          本地运行 · 数据留在电脑
+        </div>
+      </aside>
+
+      <main class="main-panel">
+        <header class="mobile-header">
+          <div class="brand-mark small" aria-hidden="true">藏</div>
+          <div><strong>归藏</strong><span>本地知识入口</span></div>
+        </header>
+
+        <div id="conversation" class="conversation" aria-live="polite">
+          <section class="welcome-card">
+            <div class="eyebrow">GUIZANG · PERSONAL KNOWLEDGE</div>
+            <h1>今天，想留下些什么？</h1>
+            <p>保存一个念头、收下一篇文章，或者用记得的关键词找回过去。</p>
+            <div class="quick-actions">
+              <button type="button" data-quick-mode="idea">记下刚冒出的想法</button>
+              <button type="button" data-quick-mode="link">收藏一个网页链接</button>
+              <button type="button" data-quick-mode="search">找回一段旧知识</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="composer-wrap">
+          <form id="composer" class="composer">
+            <div class="mode-switch" role="radiogroup" aria-label="操作类型">
+              <button type="button" class="mode-button active" data-mode="idea" role="radio" aria-checked="true">
+                <span>✦</span> 存想法
+              </button>
+              <button type="button" class="mode-button" data-mode="link" role="radio" aria-checked="false">
+                <span>↗</span> 存链接
+              </button>
+              <button type="button" class="mode-button" data-mode="search" role="radio" aria-checked="false">
+                <span>⌕</span> 找知识
+              </button>
+            </div>
+            <div class="input-row">
+              <textarea id="message-input" rows="1" placeholder="写下此刻的想法…" aria-label="输入内容"></textarea>
+              <button id="send-button" class="send-button" type="submit" aria-label="发送">
+                <span>↑</span>
+              </button>
+            </div>
+            <div id="composer-hint" class="composer-hint">原文会保存到本地 raw 层，并自动更新索引。</div>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <dialog id="document-dialog" class="document-dialog">
+      <div class="dialog-header">
+        <div>
+          <span id="dialog-type" class="result-type"></span>
+          <h2 id="dialog-title"></h2>
+          <p id="dialog-meta"></p>
+        </div>
+        <button id="dialog-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <pre id="dialog-content"></pre>
+    </dialog>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
